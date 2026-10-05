@@ -34,7 +34,7 @@ app = Client(
 
 DB_CHANNEL = "@BetterCallSafDB"
 
-# Store recent channel messages in memory
+# Dynamic background cache so you never lose files
 channel_messages = []
 
 
@@ -49,7 +49,8 @@ async def start_handler(client, message):
 @app.on_message(filters.chat(DB_CHANNEL))
 async def track_channel_messages(client, message):
   channel_messages.append(message)
-  if len(channel_messages) > 300:
+  # Expands buffer to remember up to 500 files/messages so nothing gets cut off
+  if len(channel_messages) > 500:
     channel_messages.pop(0)
 
 
@@ -58,8 +59,7 @@ async def movie_search(client, message):
   query = message.text.lower().strip()
   searching_msg = await message.reply("🔍 Searching for your movie...")
 
-  found_indices = []
-  # Find all matching title cards if there are multiple entries
+  found_index = -1
   for i, db_msg in enumerate(channel_messages):
     text_content = (
         db_msg.caption
@@ -67,16 +67,19 @@ async def movie_search(client, message):
         else (db_msg.text if db_msg.text else "")
     )
     if query in text_content.lower():
-      found_indices.append(i)
+      found_index = i
+      break
 
-  if found_indices:
-    # Take the first matched title card location
-    found_index = found_indices[0]
+  if found_index != -1:
+    # Send the main title card/poster
     main_msg = channel_messages[found_index]
     await main_msg.copy(chat_id=message.chat.id)
 
-    # Automatically grab ALL following files until the next movie title card or end of list
+    # Automatically sweep and send ALL attached files underneath (up to 30+ files safely)
+    sent_count = 0
     for j in range(found_index + 1, len(channel_messages)):
+      if sent_count >= 30:  # Maximum cap to prevent spam limits
+        break
       next_msg = channel_messages[j]
       next_text = (
           next_msg.caption
@@ -84,21 +87,19 @@ async def movie_search(client, message):
           else (next_msg.text if next_msg.text else "")
       )
 
-      # If we encounter a new movie title header/card block, stop collecting
+      # Stop collecting if we hit a completely new text description card header
       if (
-          ":" in next_text
-          and "english" in next_text.lower()
-          or ":" in next_text
-          and "rip" in next_text.lower()
+          next_text
+          and ":" in next_text
+          and ("english" in next_text.lower() or "rip" in next_text.lower())
+          and len(next_text) < 150
       ):
         break
-      if "amazon prime" in next_text.lower() and len(next_text) < 100:
-        break
 
-      # Otherwise, copy this video/file part over!
       await next_msg.copy(chat_id=message.chat.id)
-      # Small delay to prevent flood-wait limits when sending many files at once
-      await asyncio.sleep(0.4)
+      sent_count += 1
+      # Brief pause between files to ensure Telegram delivers large bundles smoothly
+      await asyncio.sleep(0.3)
 
     await searching_msg.delete()
   else:
