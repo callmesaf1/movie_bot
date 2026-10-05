@@ -70,18 +70,14 @@ async def movie_search(client, message):
       break
 
   if found_index != -1:
-    # Send the main title card
     main_msg = channel_messages[found_index]
     await main_msg.copy(chat_id=message.chat.id)
 
-    # Grab the next 15 consecutive files/videos belonging to this entry package
     sent_count = 0
     for j in range(found_index + 1, len(channel_messages)):
       if sent_count >= 15:
         break
       next_msg = channel_messages[j]
-
-      # Copy every file following it safely
       await next_msg.copy(chat_id=message.chat.id)
       sent_count += 1
       await asyncio.sleep(0.3)
