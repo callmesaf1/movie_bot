@@ -55,8 +55,7 @@ async def movie_search(client, message):
     matching_entries = []
     channel_messages = []
 
-    # Scans channel history live (requires bot to be an Admin in @BetterCallSafDB)
-    # This reads straight from your channel archive, so you NEVER have to re-forward anything!
+    # Deep scan channel history directly since your bot is an admin!
     async for db_msg in client.get_chat_history(DB_CHANNEL, limit=1000):
       channel_messages.insert(0, db_msg)
 
