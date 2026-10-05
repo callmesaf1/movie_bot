@@ -32,7 +32,6 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-# Use your new public channel username here
 DB_CHANNEL = "@BetterCallSafDB"
 
 
@@ -46,16 +45,24 @@ async def start_handler(client, message):
 
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
-  query = message.text
+  query = message.text.lower()
   searching_msg = await message.reply("🔍 Searching for your movie...")
 
   try:
     found = False
-    async for msg in client.search_messages(DB_CHANNEL, query=query, limit=1):
-      found = True
-      await msg.copy(chat_id=message.chat.id)
-      await searching_msg.delete()
-      break
+    # Iterate through recent channel messages instead of using restricted search API
+    async for msg in client.get_chat_history(DB_CHANNEL, limit=50):
+      # Check if message has caption or text matching the query
+      text_content = (
+          msg.caption
+          if msg.caption
+          else (msg.text if msg.text else "")
+      )
+      if query in text_content.lower():
+        found = True
+        await msg.copy(chat_id=message.chat.id)
+        await searching_msg.delete()
+        break
 
     if not found:
       await searching_msg.edit_text(
