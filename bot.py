@@ -34,31 +34,35 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-# Your permanent private channel numeric ID
 DB_CHANNEL = -1004402060167
+channel_messages = []
 
 
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
   await message.reply(
       "Hey there! 👋 I'm **Better Call Saf**, your go-to movie search"
-      " assistant. Type any movie name or year to get started!"
+      " assistant. Type any movie name to get started!"
   )
+
+
+# Automatically track incoming or forwarded messages in your database channel live
+@app.on_message(filters.chat(DB_CHANNEL))
+async def track_channel_messages(client, message):
+  if message not in channel_messages:
+    channel_messages.append(message)
+  if len(channel_messages) > 1000:
+    channel_messages.pop(0)
 
 
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
   query = message.text.lower().strip()
-  searching_msg = await message.reply("🔍 Searching your private database...")
+  searching_msg = await message.reply("🔍 Searching your database...")
 
   try:
     query_words = query.split()
     matching_entries = []
-    channel_messages = []
-
-    # Deep scan channel history directly using your private channel ID and admin rights
-    async for db_msg in client.get_chat_history(DB_CHANNEL, limit=1000):
-      channel_messages.insert(0, db_msg)
 
     for i, db_msg in enumerate(channel_messages):
       text_content = (
@@ -69,26 +73,28 @@ async def movie_search(client, message):
       text_lower = text_content.lower()
 
       if query_words and all(word in text_lower for word in query_words):
-        if text_content not in [m[1] for m in matching_entries]:
-          matching_entries.append((i, text_content, channel_messages))
+        if text_content and text_content not in [m[1] for m in matching_entries]:
+          matching_entries.append((i, text_content))
 
-    if len(matching_entries) > 1:
+    if len(matching_entries) > 0:
       buttons = []
-      for idx, title, _ in matching_entries[:10]:
-        buttons.append([InlineKeyboardButton(title, callback_data=f"send_{idx}")])
+      for idx, title in matching_entries[:10]:
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    f"🎬 {title[:35]}...", callback_data=f"send_{idx}"
+                )
+            ]
+        )
 
       await searching_msg.edit_text(
-          "I found multiple matches! Please choose the one you want:",
+          "I found these matching movies! Tap below to get your files:",
           reply_markup=InlineKeyboardMarkup(buttons),
       )
-
-    elif len(matching_entries) == 1:
-      found_index, _, msgs_list = matching_entries[0]
-      await send_movie_package(client, message.chat.id, found_index, msgs_list)
-      await searching_msg.delete()
     else:
       await searching_msg.edit_text(
-          "Sorry, I couldn't find that movie in your database! 😢"
+          "Sorry, I couldn't find that movie in your database! 😢\n\n*Tip:* Just"
+          " forward the movie post once inside your private channel to index it."
       )
 
   except Exception as e:
@@ -97,8 +103,7 @@ async def movie_search(client, message):
 
 @app.on_callback_query(filters.regex("^send_"))
 async def send_selected_movie(client, callback_query):
-  data_parts = callback_query.data.split("_")
-  found_index = int(data_parts[1])
+  found_index = int(callback_query.data.split("_")[1])
   chat_id = callback_query.message.chat.id
 
   await callback_query.answer("Sending your movie files...")
@@ -106,15 +111,11 @@ async def send_selected_movie(client, callback_query):
       "✅ Sending your files, please wait..."
   )
 
-  channel_messages = []
-  async for db_msg in client.get_chat_history(DB_CHANNEL, limit=1000):
-    channel_messages.insert(0, db_msg)
-
-  await send_movie_package(client, chat_id, found_index, channel_messages)
+  await send_movie_package(client, chat_id, found_index)
   await callback_query.message.delete()
 
 
-async def send_movie_package(client, chat_id, found_index, channel_messages):
+async def send_movie_package(client, chat_id, found_index):
   if found_index >= len(channel_messages):
     return
 
