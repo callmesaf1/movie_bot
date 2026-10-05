@@ -3,6 +3,7 @@ import os
 import threading
 from flask import Flask
 from pyrogram import Client, filters
+from pyrogram.errors import FloodWait
 
 # 1. Flask web server for Render
 app_web = Flask(__name__)
@@ -33,8 +34,6 @@ app = Client(
 )
 
 DB_CHANNEL = "@BetterCallSafDB"
-
-# Memory cache that automatically fills up as messages pass by or get requested
 channel_messages = []
 
 
@@ -48,7 +47,6 @@ async def start_handler(client, message):
 
 @app.on_message(filters.chat(DB_CHANNEL))
 async def track_channel_messages(client, message):
-  # Keep track of recent channel posts automatically
   if message not in channel_messages:
     channel_messages.append(message)
   if len(channel_messages) > 600:
@@ -63,12 +61,10 @@ async def movie_search(client, message):
   try:
     found_index = -1
 
-    # If cache is empty due to a restart, quickly pull recent messages from the channel
     if not channel_messages:
       async for db_msg in client.get_chat_history(DB_CHANNEL, limit=100):
         channel_messages.insert(0, db_msg)
 
-    # Search for the movie title in our message list
     for i, db_msg in enumerate(channel_messages):
       text_content = (
           db_msg.caption
@@ -80,11 +76,10 @@ async def movie_search(client, message):
         break
 
     if found_index != -1:
-      # Send the main title card message
       main_msg = channel_messages[found_index]
       await main_msg.copy(chat_id=message.chat.id)
 
-      # Automatically send ALL following files (supports 20+ language/quality files)
+      # Send all files dynamically (supports up to 25+ files/languages/qualities)
       sent_count = 0
       for j in range(found_index + 1, len(channel_messages)):
         if sent_count >= 25:
@@ -111,4 +106,17 @@ if __name__ == "__main__":
   web_thread.daemon = True
   web_thread.start()
 
-  app.run()
+  # Safe runner with flood-wait protection
+  while True:
+    try:
+      app.run()
+    except FloodWait as e:
+      print(f"Flood wait hit, sleeping for {e.value} seconds...")
+      import time
+
+      time.sleep(e.value)
+    except Exception as ex:
+      print(f"Error restarting client: {ex}")
+      import time
+
+      time.sleep(10)
