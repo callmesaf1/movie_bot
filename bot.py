@@ -1,50 +1,40 @@
-import os
-import telebot
-import requests
+import logging
+from pyrogram import Client, filters
 
-TOKEN = "830262327:AAENbiMm_BYDKDqXbvZYm5YK91PYgDDZtgE"
-bot = telebot.TeleBot(TOKEN)
+# Enable logging
+logging.basicConfig(level=logging.INFO)
 
-TMDB_API_KEY = "3a4e7e9aa297e7e0320849cbae4f6d67"
+# Your Callmesaf Bot credentials
+API_ID = 32201173
+API_HASH = "08b194481a7cc668589a34a8089634d3"
+BOT_TOKEN = "8302623227:AAENbiMm_BYDKDqXbvZYm5YK91PYgDDZtgE"
+DB_CHANNEL = -1004402060167        # Your Callmesaf Database channel ID
 
-@bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
-    bot.reply_to(message, "Hey Saf! Send me any movie name, and I will fetch its details and watch links for you!")
+app = Client(
+    "callmesaf_bot",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN
+)
 
-@bot.message_handler(func=lambda message: True)
-def search_movie(message):
-    movie_title = message.text
-    chat_id = message.chat.id
+@app.on_message(filters.command("start"))
+async def start_handler(client, message):
+    await message.reply_text(
+        "**Hey there! 👋 I'm callmesaf, your go-to movie search assistant.**\n\n"
+        "Type any movie name, and I'll find the download link for you instantly!"
+    )
+
+@app.on_message(filters.text & ~filters.private & ~filters.command)
+async def auto_filter(client, message):
+    query = message.text
+    # Search your Callmesaf Database channel for messages matching the query
+    async for msg in client.search_messages(DB_CHANNEL, query=query):
+        # Forward or copy the matching movie file/link to the user
+        await msg.copy(message.chat.id)
+        return
     
-    sent_msg = bot.send_message(chat_id, f"🔍 Searching movie database for '{movie_title}'...")
+    # If no movie is found
+    await message.reply_text("❌ Movie not found in database. Try another name!")
 
-    search_url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={movie_title}"
-    response = requests.get(search_url).json()
-
-    if response.get("results") and len(response["results"]) > 0:
-        movie = response["results"][0]
-        title = movie.get("title")
-        year = movie.get("release_date", "N/A")[:4]
-        rating = movie.get("vote_average")
-        overview = movie.get("overview")
-        poster_path = movie.get("poster_path")
-        
-        poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None
-        watch_link = f"https://www.google.com/search?q=watch+{title.replace(' ', '+')}+online"
-
-        caption = (
-            f"🎬 **{title}** ({year})\n"
-            f"⭐ **Rating:** {rating}/10\n\n"
-            f"📖 **Overview:** {overview}\n\n"
-            f"🔗 **Where to Watch / Find:** [Click Here to Search & Stream]({watch_link})"
-        )
-
-        bot.delete_message(chat_id, sent_msg.message_id)
-        if poster_url:
-            bot.send_photo(chat_id, poster_url, caption=caption, parse_mode="Markdown")
-        else:
-            bot.send_message(chat_id, caption, parse_mode="Markdown")
-    else:
-        bot.edit_message_text("❌ Movie not found in the database! Check the spelling and try again.", chat_id, sent_msg.message_id)
-
-bot.infinity_polling()
+print("Bot is starting up...")
+app.run()
