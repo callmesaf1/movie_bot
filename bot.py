@@ -34,7 +34,8 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-DB_CHANNEL = "@BetterCallSafDB"
+# Your permanent private channel numeric ID
+DB_CHANNEL = -1004402060167
 
 
 @app.on_message(filters.command("start"))
@@ -48,14 +49,14 @@ async def start_handler(client, message):
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
   query = message.text.lower().strip()
-  searching_msg = await message.reply("🔍 Searching your permanent database...")
+  searching_msg = await message.reply("🔍 Searching your private database...")
 
   try:
     query_words = query.split()
     matching_entries = []
     channel_messages = []
 
-    # Deep scan channel history directly since your bot is an admin!
+    # Deep scan channel history directly using your private channel ID and admin rights
     async for db_msg in client.get_chat_history(DB_CHANNEL, limit=1000):
       channel_messages.insert(0, db_msg)
 
@@ -87,7 +88,7 @@ async def movie_search(client, message):
       await searching_msg.delete()
     else:
       await searching_msg.edit_text(
-          "Sorry, I couldn't find that movie in the database! 😢"
+          "Sorry, I couldn't find that movie in your database! 😢"
       )
 
   except Exception as e:
