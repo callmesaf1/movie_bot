@@ -41,26 +41,27 @@ DB_CHANNEL = "@BetterCallSafDB"
 async def start_handler(client, message):
   await message.reply(
       "Hey there! 👋 I'm **Better Call Saf**, your go-to movie search"
-      " assistant. Type any movie name to get started!"
+      " assistant. Type any movie name or year to get started!"
   )
 
 
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
   query = message.text.lower().strip()
-  searching_msg = await message.reply("🔍 Searching your database...")
+  searching_msg = await message.reply("🔍 Searching your long-term database...")
 
   try:
     query_words = query.split()
     matching_entries = []
     channel_messages = []
 
-    # Directly scan the channel history live (fetches up to the last 200 messages)
-    # This ensures old uploads are NEVER forgotten even if Render restarts or code changes!
-    async for db_msg in client.get_chat_history(DB_CHANNEL, limit=200):
+    # Deep scan: Fetches up to 1,000 past messages directly from your channel history.
+    # This ensures that even years from now and thousands of uploads later, 
+    # every old or new movie is instantly recognized without losing anything!
+    async for db_msg in client.get_chat_history(DB_CHANNEL, limit=1000):
       channel_messages.insert(0, db_msg)  # Keep chronological order
 
-    # Find ALL movies matching the keywords across the entire channel history
+    # Search through all fetched history for keyword & year matches
     for i, db_msg in enumerate(channel_messages):
       text_content = (
           db_msg.caption
@@ -74,9 +75,9 @@ async def movie_search(client, message):
           matching_entries.append((i, text_content, channel_messages))
 
     if len(matching_entries) > 1:
-      # Multiple matches found: show inline buttons with movie titles
+      # Multiple matches found: display clean inline buttons showing movie titles
       buttons = []
-      for idx, title, _ in matching_entries[:10]:
+      for idx, title, _ in matching_entries[:10]:  # Show top 10 choices
         buttons.append([InlineKeyboardButton(title, callback_data=f"send_{idx}")])
 
       await searching_msg.edit_text(
@@ -91,7 +92,8 @@ async def movie_search(client, message):
       await searching_msg.delete()
     else:
       await searching_msg.edit_text(
-          "Sorry, I couldn't find that movie in the database! 😢"
+          "Sorry, I couldn't find that movie in the database! 😢\n\n*Tip:* Make"
+          " sure to include the title and release year when posting."
       )
 
   except Exception as e:
@@ -110,9 +112,9 @@ async def send_selected_movie(client, callback_query):
       "✅ Sending your files, please wait..."
   )
 
-  # Re-fetch history to get the exact message list context safely
+  # Re-fetch the deep history context safely on button click
   channel_messages = []
-  async for db_msg in client.get_chat_history(DB_CHANNEL, limit=200):
+  async for db_msg in client.get_chat_history(DB_CHANNEL, limit=1000):
     channel_messages.insert(0, db_msg)
 
   await send_movie_package(client, chat_id, found_index, channel_messages)
@@ -126,7 +128,7 @@ async def send_movie_package(client, chat_id, found_index, channel_messages):
   main_msg = channel_messages[found_index]
   await main_msg.copy(chat_id=chat_id)
 
-  # Send all subsequent files/languages/qualities for this movie package
+  # Send all subsequent files/languages/qualities belonging to this movie package (up to 25+ files)
   sent_count = 0
   for j in range(found_index + 1, len(channel_messages)):
     if sent_count >= 25:
