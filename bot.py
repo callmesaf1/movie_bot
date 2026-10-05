@@ -4,7 +4,7 @@ import threading
 from flask import Flask
 from pyrogram import Client, filters
 
-# 1. Flask web server to satisfy Render's port requirement
+# 1. Flask web server for Render
 app_web = Flask(__name__)
 
 
@@ -18,7 +18,7 @@ def run_web():
   app_web.run(host="0.0.0.0", port=port)
 
 
-# 2. Event loop fix for Python
+# 2. Event loop fix
 try:
   asyncio.get_event_loop()
 except RuntimeError:
@@ -32,6 +32,7 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
+# Convert channel ID properly
 DB_CHANNEL = -1004402060167
 
 
@@ -49,11 +50,12 @@ async def movie_search(client, message):
   searching_msg = await message.reply("🔍 Searching for your movie...")
 
   try:
-    # Search your private database channel for the movie
+    # Ensure the client has joined/cached the channel chat first
+    chat = await client.get_chat(DB_CHANNEL)
+
     found = False
-    async for msg in client.search_messages(DB_CHANNEL, query=query, limit=1):
+    async for msg in client.search_messages(chat.id, query=query, limit=1):
       found = True
-      # Copy the file/message directly to the user
       await msg.copy(chat_id=message.chat.id)
       await searching_msg.delete()
       break
@@ -68,10 +70,8 @@ async def movie_search(client, message):
 
 
 if __name__ == "__main__":
-  # Run the web server in a background thread
   web_thread = threading.Thread(target=run_web)
   web_thread.daemon = True
   web_thread.start()
 
-  # Start the Telegram Bot
   app.run()
