@@ -34,6 +34,9 @@ app = Client(
 
 DB_CHANNEL = "@BetterCallSafDB"
 
+# In-memory movie database dictionary: { "movie name keyword": message_object }
+movie_database = {}
+
 
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
@@ -43,34 +46,37 @@ async def start_handler(client, message):
   )
 
 
+# Automatically index any new file or message posted in the database channel
+@app.on_message(filters.chat(DB_CHANNEL))
+async def index_channel_messages(client, message):
+  text_content = (
+      message.caption if message.caption else (message.text if message.text else "")
+  )
+  if text_content:
+    # Store keywords in lowercase for easy matching
+    movie_database[text_content.lower().strip()] = message
+
+
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
-  query = message.text.lower()
+  query = message.text.lower().strip()
   searching_msg = await message.reply("🔍 Searching for your movie...")
 
-  try:
-    found = False
-    # Iterate through recent channel messages instead of using restricted search API
-    async for msg in client.get_chat_history(DB_CHANNEL, limit=50):
-      # Check if message has caption or text matching the query
-      text_content = (
-          msg.caption
-          if msg.caption
-          else (msg.text if msg.text else "")
-      )
-      if query in text_content.lower():
-        found = True
-        await msg.copy(chat_id=message.chat.id)
-        await searching_msg.delete()
-        break
+  found = False
+  # Check if the query matches any stored movie key
+  for title, db_msg in movie_database.items():
+    if query in title or title in query:
+      found = True
+      await db_msg.copy(chat_id=message.chat.id)
+      await searching_msg.delete()
+      break
 
-    if not found:
-      await searching_msg.edit_text(
-          "Sorry, I couldn't find that movie in the database! 😢 Try searching"
-          " another title."
-      )
-  except Exception as e:
-    await searching_msg.edit_text(f"Error: {str(e)}")
+  if not found:
+    await searching_msg.edit_text(
+        "Sorry, I couldn't find that movie in the database! 😢\n\n*Tip:* Try"
+        " forwarding or posting the movie again into your `@BetterCallSafDB`"
+        " channel so the bot can index it!"
+    )
 
 
 if __name__ == "__main__":
