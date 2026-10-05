@@ -4,6 +4,7 @@ import threading
 from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.errors import FloodWait
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 # 1. Flask web server for Render
 app_web = Flask(__name__)
@@ -41,7 +42,7 @@ channel_messages = []
 async def start_handler(client, message):
   await message.reply(
       "Hey there! 👋 I'm **Better Call Saf**, your go-to movie search"
-      " assistant. Type any movie name or year to get started!"
+      " assistant. Type any movie name to get started!"
   )
 
 
@@ -59,15 +60,14 @@ async def movie_search(client, message):
   searching_msg = await message.reply("🔍 Searching for your movie...")
 
   try:
-    found_index = -1
-
     if not channel_messages:
       async for db_msg in client.get_chat_history(DB_CHANNEL, limit=100):
         channel_messages.insert(0, db_msg)
 
-    # Split query into individual keywords for smart multi-word and year matching
     query_words = query.split()
+    matching_entries = []
 
+    # Find ALL movies matching the keywords
     for i, db_msg in enumerate(channel_messages):
       text_content = (
           db_msg.caption
@@ -76,35 +76,63 @@ async def movie_search(client, message):
       )
       text_lower = text_content.lower()
 
-      # Match if all words typed by the user exist in the message text/caption
       if query_words and all(word in text_lower for word in query_words):
-        found_index = i
-        break
+        if text_content not in [m[1] for m in matching_entries]:
+          matching_entries.append((i, text_content))
 
-    if found_index != -1:
-      main_msg = channel_messages[found_index]
-      await main_msg.copy(chat_id=message.chat.id)
+    if len(matching_entries) > 1:
+      # Multiple matches found: show inline buttons with movie titles
+      buttons = []
+      for idx, title in matching_entries[:10]:
+        buttons.append([InlineKeyboardButton(title, callback_data=f"send_{idx}")])
 
-      # Send all subsequent files belonging to this movie bundle (up to 25+ files)
-      sent_count = 0
-      for j in range(found_index + 1, len(channel_messages)):
-        if sent_count >= 25:
-          break
-        next_msg = channel_messages[j]
-        await next_msg.copy(chat_id=message.chat.id)
-        sent_count += 1
-        # Small delay to ensure smooth delivery of heavy media packages
-        await asyncio.sleep(0.3)
+      await searching_msg.edit_text(
+          "I found multiple matches! Please choose the one you want:",
+          reply_markup=InlineKeyboardMarkup(buttons),
+      )
 
+    elif len(matching_entries) == 1:
+      # Exactly 1 match found: send automatically
+      found_index = matching_entries[0][0]
+      await send_movie_package(client, message.chat.id, found_index)
       await searching_msg.delete()
     else:
       await searching_msg.edit_text(
-          "Sorry, I couldn't find that movie in the database! 😢\n\n*Tip:* Try"
-          " searching with keywords like 'spiderman' or release year."
+          "Sorry, I couldn't find that movie in the database! 😢"
       )
 
   except Exception as e:
     await searching_msg.edit_text(f"Error: {str(e)}")
+
+
+# Handle button clicks when a user selects a specific movie from the list
+@app.on_callback_query(filters.regex("^send_"))
+async def send_selected_movie(client, callback_query):
+  found_index = int(callback_query.data.split("_")[1])
+  chat_id = callback_query.message.chat.id
+
+  await callback_query.answer("Sending your movie files...")
+  await callback_query.message.edit_text(
+      "✅ Sending your files, please wait..."
+  )
+
+  await send_movie_package(client, chat_id, found_index)
+  await callback_query.message.delete()
+
+
+async def send_movie_package(client, chat_id, found_index):
+  main_msg = channel_messages[found_index]
+  await main_msg.copy(chat_id=chat_id)
+
+  # Send all subsequent files/languages/qualities for this movie package
+  sent_count = 0
+  for j in range(found_index + 1, len(channel_messages)):
+    if sent_count >= 25:
+      break
+    next_msg = channel_messages[j]
+    await next_msg.copy(chat_id=chat_id)
+    sent_count += 1
+    await asyncio.sleep(0.3)
 
 
 if __name__ == "__main__":
@@ -112,7 +140,6 @@ if __name__ == "__main__":
   web_thread.daemon = True
   web_thread.start()
 
-  # Resilient startup loop with flood-wait protection
   while True:
     try:
       app.run()
