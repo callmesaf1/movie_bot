@@ -32,7 +32,7 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-# Use your channel ID integer
+# Use string format or integer for the channel
 DB_CHANNEL = -1004402060167
 
 
@@ -50,9 +50,11 @@ async def movie_search(client, message):
   searching_msg = await message.reply("🔍 Searching for your movie...")
 
   try:
-    # Resolve the chat peer properly first via client dialogs/cache
+    # Resolve chat using the peer object directly
+    chat_id = int(DB_CHANNEL)
     found = False
-    async for msg in client.search_messages(DB_CHANNEL, query=query, limit=1):
+
+    async for msg in client.search_messages(chat_id, query=query, limit=1):
       found = True
       await msg.copy(chat_id=message.chat.id)
       await searching_msg.delete()
@@ -64,23 +66,18 @@ async def movie_search(client, message):
           " another title."
       )
   except Exception as e:
-    # Alternative fallback using chat storage extraction
+    # Fallback to export link or get chat
     try:
       chat = await client.get_chat(DB_CHANNEL)
-      found_alt = False
       async for msg in client.search_messages(chat.id, query=query, limit=1):
-        found_alt = True
         await msg.copy(chat_id=message.chat.id)
         await searching_msg.delete()
-        break
-      if not found_alt:
-        await searching_msg.edit_text(
-            "Sorry, I couldn't find that movie in the database! 😢"
-        )
-    except Exception as inner_e:
+        return
+      await searching_msg.edit_text("Movie not found in database channel.")
+    except Exception as err:
       await searching_msg.edit_text(
-          "⚠️️ Please make sure the bot is an admin in your database channel"
-          f" and has posted messages.\nError: {str(inner_e)}"
+          f"Database Error: {str(err)}\n\nTip: Make sure the bot is an admin in"
+          " your database channel!"
       )
 
 
