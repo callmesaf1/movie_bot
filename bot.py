@@ -34,7 +34,7 @@ app = Client(
 
 DB_CHANNEL = "@BetterCallSafDB"
 
-# Store message IDs and their sequence in the database channel
+# Store recent channel messages in memory
 channel_messages = []
 
 
@@ -46,12 +46,10 @@ async def start_handler(client, message):
   )
 
 
-# Automatically keep track of messages posted in the database channel
 @app.on_message(filters.chat(DB_CHANNEL))
 async def track_channel_messages(client, message):
   channel_messages.append(message)
-  # Keep only the last 200 messages in memory to stay lightweight
-  if len(channel_messages) > 200:
+  if len(channel_messages) > 300:
     channel_messages.pop(0)
 
 
@@ -60,8 +58,8 @@ async def movie_search(client, message):
   query = message.text.lower().strip()
   searching_msg = await message.reply("🔍 Searching for your movie...")
 
-  found_index = -1
-  # Search for the message containing the movie title
+  found_indices = []
+  # Find all matching title cards if there are multiple entries
   for i, db_msg in enumerate(channel_messages):
     text_content = (
         db_msg.caption
@@ -69,39 +67,43 @@ async def movie_search(client, message):
         else (db_msg.text if db_msg.text else "")
     )
     if query in text_content.lower():
-      found_index = i
-      break
+      found_indices.append(i)
 
-  if found_index != -1:
-    # Send the main title/poster message found
+  if found_indices:
+    # Take the first matched title card location
+    found_index = found_indices[0]
     main_msg = channel_messages[found_index]
     await main_msg.copy(chat_id=message.chat.id)
 
-    # Automatically grab and send the next 3 messages (your video files) that follow it!
-    sent_count = 0
+    # Automatically grab ALL following files until the next movie title card or end of list
     for j in range(found_index + 1, len(channel_messages)):
-      if sent_count >= 3:
-        break
       next_msg = channel_messages[j]
-      # Stop if we hit another movie title card
       next_text = (
           next_msg.caption
           if next_msg.caption
           else (next_msg.text if next_msg.text else "")
       )
-      if "Spiderman" in next_text or "amazon prime" in next_text.lower():
-        # If it's another title header, let's look closer, but for now let's copy consecutive items
-        pass
 
+      # If we encounter a new movie title header/card block, stop collecting
+      if (
+          ":" in next_text
+          and "english" in next_text.lower()
+          or ":" in next_text
+          and "rip" in next_text.lower()
+      ):
+        break
+      if "amazon prime" in next_text.lower() and len(next_text) < 100:
+        break
+
+      # Otherwise, copy this video/file part over!
       await next_msg.copy(chat_id=message.chat.id)
-      sent_count += 1
+      # Small delay to prevent flood-wait limits when sending many files at once
+      await asyncio.sleep(0.4)
 
     await searching_msg.delete()
   else:
     await searching_msg.edit_text(
-        "Sorry, I couldn't find that movie in the database! 😢\n\n*Tip:* Try"
-        " posting or forwarding the movie card again in `@BetterCallSafDB` so"
-        " the bot registers it."
+        "Sorry, I couldn't find that movie in the database! 😢"
     )
 
 
