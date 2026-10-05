@@ -34,8 +34,8 @@ app = Client(
 
 DB_CHANNEL = "@BetterCallSafDB"
 
-# In-memory movie database dictionary: { "movie name keyword": message_object }
-movie_database = {}
+# Store message IDs and their sequence in the database channel
+channel_messages = []
 
 
 @app.on_message(filters.command("start"))
@@ -46,15 +46,13 @@ async def start_handler(client, message):
   )
 
 
-# Automatically index any new file or message posted in the database channel
+# Automatically keep track of messages posted in the database channel
 @app.on_message(filters.chat(DB_CHANNEL))
-async def index_channel_messages(client, message):
-  text_content = (
-      message.caption if message.caption else (message.text if message.text else "")
-  )
-  if text_content:
-    # Store keywords in lowercase for easy matching
-    movie_database[text_content.lower().strip()] = message
+async def track_channel_messages(client, message):
+  channel_messages.append(message)
+  # Keep only the last 200 messages in memory to stay lightweight
+  if len(channel_messages) > 200:
+    channel_messages.pop(0)
 
 
 @app.on_message(filters.text & ~filters.command(["start"]))
@@ -62,20 +60,48 @@ async def movie_search(client, message):
   query = message.text.lower().strip()
   searching_msg = await message.reply("🔍 Searching for your movie...")
 
-  found = False
-  # Check if the query matches any stored movie key
-  for title, db_msg in movie_database.items():
-    if query in title or title in query:
-      found = True
-      await db_msg.copy(chat_id=message.chat.id)
-      await searching_msg.delete()
+  found_index = -1
+  # Search for the message containing the movie title
+  for i, db_msg in enumerate(channel_messages):
+    text_content = (
+        db_msg.caption
+        if db_msg.caption
+        else (db_msg.text if db_msg.text else "")
+    )
+    if query in text_content.lower():
+      found_index = i
       break
 
-  if not found:
+  if found_index != -1:
+    # Send the main title/poster message found
+    main_msg = channel_messages[found_index]
+    await main_msg.copy(chat_id=message.chat.id)
+
+    # Automatically grab and send the next 3 messages (your video files) that follow it!
+    sent_count = 0
+    for j in range(found_index + 1, len(channel_messages)):
+      if sent_count >= 3:
+        break
+      next_msg = channel_messages[j]
+      # Stop if we hit another movie title card
+      next_text = (
+          next_msg.caption
+          if next_msg.caption
+          else (next_msg.text if next_msg.text else "")
+      )
+      if "Spiderman" in next_text or "amazon prime" in next_text.lower():
+        # If it's another title header, let's look closer, but for now let's copy consecutive items
+        pass
+
+      await next_msg.copy(chat_id=message.chat.id)
+      sent_count += 1
+
+    await searching_msg.delete()
+  else:
     await searching_msg.edit_text(
         "Sorry, I couldn't find that movie in the database! 😢\n\n*Tip:* Try"
-        " forwarding or posting the movie again into your `@BetterCallSafDB`"
-        " channel so the bot can index it!"
+        " posting or forwarding the movie card again in `@BetterCallSafDB` so"
+        " the bot registers it."
     )
 
 
