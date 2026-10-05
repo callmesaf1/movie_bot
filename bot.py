@@ -1,5 +1,12 @@
+import asyncio
 import logging
 from pyrogram import Client, filters
+
+# Fix for Python 3.14 event loop compatibility
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
 
 # Enable logging
 logging.basicConfig(level=logging.INFO)
@@ -8,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 API_ID = 32201173
 API_HASH = "08b194481a7cc668589a34a8089634d3"
 BOT_TOKEN = "8302623227:AAENbiMm_BYDKDqXbvZYm5YK91PYgDDZtgE"
-DB_CHANNEL = -1004402060167        # Your Callmesaf Database channel ID
+DB_CHANNEL = -1004402060167
 
 app = Client(
     "callmesaf_bot",
@@ -27,13 +34,10 @@ async def start_handler(client, message):
 @app.on_message(filters.text & ~filters.private & ~filters.command)
 async def auto_filter(client, message):
     query = message.text
-    # Search your Callmesaf Database channel for messages matching the query
     async for msg in client.search_messages(DB_CHANNEL, query=query):
-        # Forward or copy the matching movie file/link to the user
         await msg.copy(message.chat.id)
         return
     
-    # If no movie is found
     await message.reply_text("❌ Movie not found in database. Try another name!")
 
 print("Bot is starting up...")
