@@ -34,9 +34,20 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-# Use your private channel numeric ID
 DB_CHANNEL = -1004402060167
 channel_messages = []
+
+
+# AUTO-LOADER ON STARTUP: Automatically pulls your movies when the bot boots up!
+async def load_channel_history():
+  await app.start()
+  try:
+    async for db_msg in app.get_chat_history(DB_CHANNEL, limit=100):
+      if db_msg not in channel_messages:
+        channel_messages.insert(0, db_msg)
+    print(f"Successfully auto-loaded {len(channel_messages)} items from database!")
+  except Exception as e:
+    print(f"Auto-load note: {e}")
 
 
 @app.on_message(filters.command("start"))
@@ -47,7 +58,7 @@ async def start_handler(client, message):
   )
 
 
-# Automatically cache incoming or existing channel messages live
+# Track incoming or newly forwarded channel posts live
 @app.on_message(filters.chat(DB_CHANNEL))
 async def track_channel_messages(client, message):
   if message not in channel_messages:
@@ -93,8 +104,7 @@ async def movie_search(client, message):
       await searching_msg.delete()
     else:
       await searching_msg.edit_text(
-          "Sorry, I couldn't find that movie in your database! 😢\n\n*Tip:* Just"
-          " forward the movie post once in your private channel to index it."
+          "Sorry, I couldn't find that movie in your database! 😢"
       )
 
   except Exception as e:
@@ -136,6 +146,10 @@ if __name__ == "__main__":
   web_thread = threading.Thread(target=run_web)
   web_thread.daemon = True
   web_thread.start()
+
+  # Run auto-loader before starting idle loop
+  loop = asyncio.get_event_loop()
+  loop.run_until_complete(load_channel_history())
 
   while True:
     try:
