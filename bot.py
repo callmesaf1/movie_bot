@@ -34,6 +34,9 @@ app = Client(
 
 DB_CHANNEL = "@BetterCallSafDB"
 
+# Memory cache that automatically fills up as messages pass by or get requested
+channel_messages = []
+
 
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
@@ -43,63 +46,61 @@ async def start_handler(client, message):
   )
 
 
+@app.on_message(filters.chat(DB_CHANNEL))
+async def track_channel_messages(client, message):
+  # Keep track of recent channel posts automatically
+  if message not in channel_messages:
+    channel_messages.append(message)
+  if len(channel_messages) > 600:
+    channel_messages.pop(0)
+
+
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
   query = message.text.lower().strip()
   searching_msg = await message.reply("🔍 Searching for your movie...")
 
   try:
-    found_any = False
-    sent_count = 0
-    target_found = False
+    found_index = -1
 
-    # Scan recent messages directly from your database channel on the fly
-    async for db_msg in client.search_global_messages(query, limit=10):
-      # Filter for messages originating from your database channel
-      if str(db_msg.chat.id) in [str(DB_CHANNEL), "-1004402060167", "BetterCallSafDB"]:
-        target_found = True
+    # If cache is empty due to a restart, quickly pull recent messages from the channel
+    if not channel_messages:
+      async for db_msg in client.get_chat_history(DB_CHANNEL, limit=100):
+        channel_messages.insert(0, db_msg)
+
+    # Search for the movie title in our message list
+    for i, db_msg in enumerate(channel_messages):
+      text_content = (
+          db_msg.caption
+          if db_msg.caption
+          else (db_msg.text if db_msg.text else "")
+      )
+      if query in text_content.lower():
+        found_index = i
         break
 
-    # Alternative direct scan through history if global search misses channel context
-    if not target_found:
-      matched_msg = None
-      following_msgs = []
-      
-      async for db_msg in client.get_chat_history(DB_CHANNEL, limit=100):
-        text_content = (
-            db_msg.caption
-            if db_msg.caption
-            else (db_msg.text if db_msg.text else "")
-        )
-        if query in text_content.lower():
-          matched_msg = db_msg
+    if found_index != -1:
+      # Send the main title card message
+      main_msg = channel_messages[found_index]
+      await main_msg.copy(chat_id=message.chat.id)
+
+      # Automatically send ALL following files (supports 20+ language/quality files)
+      sent_count = 0
+      for j in range(found_index + 1, len(channel_messages)):
+        if sent_count >= 25:
           break
+        next_msg = channel_messages[j]
+        await next_msg.copy(chat_id=message.chat.id)
+        sent_count += 1
+        await asyncio.sleep(0.3)
 
-      if matched_msg:
-        found_any = True
-        await matched_msg.copy(chat_id=message.chat.id)
-        
-        # Now pull all subsequent files following this match in the channel history
-        async for db_msg in client.get_chat_history(DB_CHANNEL, limit=50):
-          if db_msg.id < matched_msg.id and (matched_msg.id - db_msg.id) <= 20:
-            following_msgs.append(db_msg)
-
-        # Sort them in chronological order so they send top-to-bottom
-        following_msgs.sort(key=lambda x: x.id)
-
-        for next_msg in following_msgs:
-          if sent_count >= 20: # Allows up to 20 files per movie safely!
-            break
-          await next_msg.copy(chat_id=message.chat.id)
-          sent_count += 1
-          await asyncio.sleep(0.3)
-
-    if not found_any and not target_found:
-      await searching_msg.edit_text(
-          "Sorry, I couldn't find that movie in the database! 😢"
-      )
-    else:
       await searching_msg.delete()
+    else:
+      await searching_msg.edit_text(
+          "Sorry, I couldn't find that movie in the database! 😢\n\n*Tip:* Try"
+          " forwarding the movie post in `@BetterCallSafDB` so the bot picks"
+          " it up!"
+      )
 
   except Exception as e:
     await searching_msg.edit_text(f"Error: {str(e)}")
