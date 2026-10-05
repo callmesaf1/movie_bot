@@ -32,7 +32,6 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-# Use string format or integer for the channel
 DB_CHANNEL = -1004402060167
 
 
@@ -50,11 +49,11 @@ async def movie_search(client, message):
   searching_msg = await message.reply("🔍 Searching for your movie...")
 
   try:
-    # Resolve chat using the peer object directly
-    chat_id = int(DB_CHANNEL)
-    found = False
+    # First, force client to fetch the chat to cache its peer reference
+    chat = await client.get_chat(DB_CHANNEL)
 
-    async for msg in client.search_messages(chat_id, query=query, limit=1):
+    found = False
+    async for msg in client.search_messages(chat.id, query=query, limit=1):
       found = True
       await msg.copy(chat_id=message.chat.id)
       await searching_msg.delete()
@@ -66,19 +65,7 @@ async def movie_search(client, message):
           " another title."
       )
   except Exception as e:
-    # Fallback to export link or get chat
-    try:
-      chat = await client.get_chat(DB_CHANNEL)
-      async for msg in client.search_messages(chat.id, query=query, limit=1):
-        await msg.copy(chat_id=message.chat.id)
-        await searching_msg.delete()
-        return
-      await searching_msg.edit_text("Movie not found in database channel.")
-    except Exception as err:
-      await searching_msg.edit_text(
-          f"Database Error: {str(err)}\n\nTip: Make sure the bot is an admin in"
-          " your database channel!"
-      )
+    await searching_msg.edit_text(f"Error: {str(e)}")
 
 
 if __name__ == "__main__":
