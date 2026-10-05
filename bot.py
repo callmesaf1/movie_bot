@@ -4,7 +4,7 @@ import threading
 from flask import Flask
 from pyrogram import Client, filters
 
-# 1. Flask web server for Render
+# Flask web server for Render
 app_web = Flask(__name__)
 
 
@@ -18,13 +18,7 @@ def run_web():
   app_web.run(host="0.0.0.0", port=port)
 
 
-# 2. Event loop fix
-try:
-  asyncio.get_event_loop()
-except RuntimeError:
-  asyncio.set_event_loop(asyncio.new_event_loop())
-
-# 3. Initialize Pyrogram Client
+# Initialize Pyrogram Client
 app = Client(
     "movie_bot",
     api_id=int(os.environ.get("API_ID", 0)),
@@ -33,8 +27,6 @@ app = Client(
 )
 
 DB_CHANNEL = "@BetterCallSafDB"
-
-# Store recent channel messages in memory
 channel_messages = []
 
 
