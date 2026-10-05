@@ -18,7 +18,7 @@ app = Client(
 
 DB_CHANNEL = -1004402060167
 
-@app.on_message(filters.text & (~filters.private) & (~filters.command))
+@app.on_message(filters.text)
 async def movie_search(client, message):
     # Your bot handler logic goes here
     pass
