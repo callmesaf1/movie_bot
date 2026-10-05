@@ -32,7 +32,8 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-DB_CHANNEL = -1004402060167
+# Use your new public channel username here
+DB_CHANNEL = "@BetterCallSafDB"
 
 
 @app.on_message(filters.command("start"))
@@ -49,11 +50,8 @@ async def movie_search(client, message):
   searching_msg = await message.reply("🔍 Searching for your movie...")
 
   try:
-    # First, force client to fetch the chat to cache its peer reference
-    chat = await client.get_chat(DB_CHANNEL)
-
     found = False
-    async for msg in client.search_messages(chat.id, query=query, limit=1):
+    async for msg in client.search_messages(DB_CHANNEL, query=query, limit=1):
       found = True
       await msg.copy(chat_id=message.chat.id)
       await searching_msg.delete()
