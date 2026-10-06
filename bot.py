@@ -40,12 +40,15 @@ async def movie_search(client, message):
   searching_msg = await message.reply("🔍 Searching channel library...")
 
   try:
+    # Resolve chat entity first to completely prevent Peer id invalid errors
+    chat_entity = await client.get_chat(DB_CHANNEL)
+
     query_words = query.split()
     matching_entries = []
     channel_messages = []
 
     # Fetch recent messages directly from your private channel
-    async for db_msg in client.get_chat_history(DB_CHANNEL, limit=100):
+    async for db_msg in client.get_chat_history(chat_entity.id, limit=100):
       channel_messages.insert(0, db_msg)
 
     for i, db_msg in enumerate(channel_messages):
@@ -94,24 +97,30 @@ async def send_selected_movie(client, callback_query):
       "✅ Sending your files, please wait..."
   )
 
-  channel_messages = []
-  async for db_msg in client.get_chat_history(DB_CHANNEL, limit=100):
-    channel_messages.insert(0, db_msg)
+  try:
+    chat_entity = await client.get_chat(DB_CHANNEL)
+    channel_messages = []
+    async for db_msg in client.get_chat_history(chat_entity.id, limit=100):
+      channel_messages.insert(0, db_msg)
 
-  if found_index < len(channel_messages):
-    main_msg = channel_messages[found_index]
-    await main_msg.copy(chat_id=chat_id)
+    if found_index < len(channel_messages):
+      main_msg = channel_messages[found_index]
+      await main_msg.copy(chat_id=chat_id)
 
-    sent_count = 0
-    for j in range(found_index + 1, len(channel_messages)):
-      if sent_count >= 25:
-        break
-      next_msg = channel_messages[j]
-      await next_msg.copy(chat_id=chat_id)
-      sent_count += 1
-      await asyncio.sleep(0.3)
+      sent_count = 0
+      for j in range(found_index + 1, len(channel_messages)):
+        if sent_count >= 25:
+          break
+        next_msg = channel_messages[j]
+        await next_msg.copy(chat_id=chat_id)
+        sent_count += 1
+        await asyncio.sleep(0.3)
 
-  await callback_query.message.delete()
+    await callback_query.message.delete()
+  except Exception as e:
+    await callback_query.message.edit_text(
+        f"Error sending file package: {str(e)}"
+    )
 
 
 if __name__ == "__main__":
