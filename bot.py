@@ -34,8 +34,8 @@ app = Client(
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
   await message.reply(
-      "Hey there! 👋 I'm your Streaming Assistant.\nType any movie name to get"
-      " its streaming link!"
+      "Hey there! 👋 I'm your Multi-Source Streaming Assistant.\nType any movie"
+      " name to get streaming links from all platforms!"
   )
 
 
@@ -45,16 +45,28 @@ async def movie_search(client, message):
   if not query:
     return
 
-  # Direct link to Popcorn Movies homepage or search structure
-  streaming_url = "https://popcornmovies.ac/"
-
+  # Multiple streaming platform buttons
   keyboard = InlineKeyboardMarkup([
-      [InlineKeyboardButton(f"🍿 Watch '{query}' on Popcorn Movies", url=streaming_url)]
+      [
+          InlineKeyboardButton(
+              "🎬 Watch on Bingebox", url="https://bingebox.ac/"
+          )
+      ],
+      [
+          InlineKeyboardButton(
+              "🍿 Watch on Popcorn Movies", url="https://popcornmovies.ac/"
+          )
+      ],
+      [
+          InlineKeyboardButton(
+              "🌐 Watch on Vivarium", url="https://vivarium.su/"
+          )
+      ],
   ])
 
   await message.reply(
-      f"🎬 **Movie Found:** `{query}`\n\nClick below to open and stream on"
-      " Popcorn Movies:",
+      f"🎬 **Movie Found:** `{query}`\n\nChoose your preferred streaming"
+      " platform below:",
       reply_markup=keyboard,
   )
 
