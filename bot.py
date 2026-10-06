@@ -4,7 +4,7 @@ from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# 1. Initialize Flask web server
+# 1. Initialize Flask web server for Render port detection
 app_web = Flask(__name__)
 
 
@@ -30,117 +30,44 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-# Movie database with direct movie-specific links for all 3 working platforms
-MOVIE_PARTS = {
-    "spiderman": [
-        {
-            "title": "Spider-Man: Brand New Day (2026)",
-            "netplayz": "https://netplayz.icu/movie/1311031",
-            "popcorn": "https://popcornmovies.ac/movie/1311031",
-            "zoryva": "https://zoryva.me/movie/1311031",
-        },
-        {
-            "title": "Spider-Man: No Way Home (2021)",
-            "netplayz": "https://netplayz.icu/movie/634649",
-            "popcorn": "https://popcornmovies.ac/movie/634649",
-            "zoryva": "https://zoryva.me/movie/634649",
-        },
-    ],
-    "batman": [
-        {
-            "title": "The Batman (2022)",
-            "netplayz": "https://netplayz.icu/movie/414906",
-            "popcorn": "https://popcornmovies.ac/movie/414906",
-            "zoryva": "https://zoryva.me/movie/414906",
-        },
-        {
-            "title": "The Dark Knight (2008)",
-            "netplayz": "https://netplayz.icu/movie/155",
-            "popcorn": "https://popcornmovies.ac/movie/155",
-            "zoryva": "https://zoryva.me/movie/155",
-        },
-    ],
-}
-
 
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
   await message.reply(
-      "Hey there! 👋 I'm your Smart Streaming Assistant.\nType a movie name"
-      " like `spiderman` or `batman`!"
+      "Hey there! 👋 I'm your Universal Streaming Assistant.\nType *any*"
+      " movie name in the world, and I will generate the direct watch links"
+      " for you instantly!"
   )
 
 
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
   try:
-    query = message.text.lower().strip()
+    query = message.text.strip()
+    if not query:
+      return
 
-    matched_key = None
-    for key in MOVIE_PARTS:
-      if key in query:
-        matched_key = key
-        break
+    # Format user query for clean web searching across the platforms
+    search_q = query.lower().replace(" ", "+")
 
-    if matched_key:
-      parts = MOVIE_PARTS[matched_key]
-      buttons = []
-      for idx, movie in enumerate(parts):
-        buttons.append([
-            InlineKeyboardButton(
-                f"🎬 {movie['title']}", callback_data=f"part_{matched_key}_{idx}"
-            )
-        ])
-
-      await message.reply(
-          f"🔍 I found multiple parts for **{query.title()}**.\nPlease select"
-          " the part you want:",
-          reply_markup=InlineKeyboardMarkup(buttons),
-      )
-    else:
-      keyboard = InlineKeyboardMarkup([
-          [InlineKeyboardButton("🎬 Watch on Netplayz", url="https://netplayz.icu/")],
-          [
-              InlineKeyboardButton(
-                  "🍿 Watch on Popcorn Movies", url="https://popcornmovies.ac/"
-              )
-          ],
-          [InlineKeyboardButton("🌐 Watch on Zoryva", url="https://zoryva.me/")],
-      ])
-      await message.reply(
-          f"🎬 **Movie:** `{query.title()}`\n\nChoose your platform below:",
-          reply_markup=keyboard,
-      )
-  except Exception as e:
-    print(f"Search Error: {e}")
-
-
-@app.on_callback_query(filters.regex("^part_"))
-async def select_movie_part(client, callback_query):
-  try:
-    data_parts = callback_query.data.split("_")
-    key = data_parts[1]
-    idx = int(data_parts[2])
-
-    movie = MOVIE_PARTS[key][idx]
+    # Dynamic direct search links for all 3 streaming platforms
+    netplayz_url = f"https://netplayz.icu/search?q={search_q}"
+    popcorn_url = f"https://popcornmovies.ac/search?q={search_q}"
+    zoryva_url = f"https://zoryva.me/search?q={search_q}"
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎬 Watch on Netplayz", url=movie["netplayz"])],
-        [
-            InlineKeyboardButton(
-                "🍿 Watch on Popcorn Movies", url=movie["popcorn"]
-            )
-        ],
-        [InlineKeyboardButton("🌐 Watch on Zoryva", url=movie["zoryva"])],
+        [InlineKeyboardButton("🎬 Watch on Netplayz", url=netplayz_url)],
+        [InlineKeyboardButton("🍿 Watch on Popcorn Movies", url=popcorn_url)],
+        [InlineKeyboardButton("🌐 Watch on Zoryva", url=zoryva_url)],
     ])
 
-    await callback_query.message.edit_text(
-        f"✨ **Selected:** {movie['title']}\n\nClick below to open direct movie"
-        " page:",
+    await message.reply(
+        f"🔍 **Search Results for:** `{query.title()}`\n\nChoose your platform"
+        " below to open the movie page:",
         reply_markup=keyboard,
     )
   except Exception as e:
-    print(f"Callback Error: {e}")
+    print(f"Search Error: {e}")
 
 
 if __name__ == "__main__":
