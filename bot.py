@@ -30,7 +30,7 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-# Accurate movie entries with correct platform paths
+# Movie database parts
 MOVIE_PARTS = {
     "spiderman": [
         {
@@ -67,73 +67,96 @@ MOVIE_PARTS = {
 async def start_handler(client, message):
   await message.reply(
       "Hey there! 👋 I'm your Smart Streaming Assistant.\nType a movie name"
-      " like `spiderman` or `batman` to select a part!"
+      " like `spiderman` or `batman`!"
   )
 
 
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
-  query = message.text.lower().strip()
+  try:
+    query = message.text.lower().strip()
 
-  matched_key = None
-  for key in MOVIE_PARTS:
-    if key in query:
-      matched_key = key
-      break
+    matched_key = None
+    for key in MOVIE_PARTS:
+      if key in query:
+        matched_key = key
+        break
 
-  if matched_key:
-    parts = MOVIE_PARTS[matched_key]
-    buttons = []
-    for idx, movie in enumerate(parts):
-      buttons.append([
-          InlineKeyboardButton(
-              f"🎬 {movie['title']}", callback_data=f"part_{matched_key}_{idx}"
-          )
+    if matched_key:
+      parts = MOVIE_PARTS[matched_key]
+      buttons = []
+      for idx, movie in enumerate(parts):
+        buttons.append([
+            InlineKeyboardButton(
+                f"🎬 {movie['title']}", callback_data=f"part_{matched_key}_{idx}"
+            )
+        ])
+
+      await message.reply(
+          f"🔍 I found multiple parts for **{query.title()}**.\nPlease select"
+          " the part you want:",
+          reply_markup=InlineKeyboardMarkup(buttons),
+      )
+    else:
+      # General fallback links for any other movie typed
+      keyboard = InlineKeyboardMarkup([
+          [
+              InlineKeyboardButton(
+                  "🎬 Watch on Bingebox", url="https://bingebox.ac/"
+              )
+          ],
+          [
+              InlineKeyboardButton(
+                  "🍿 Watch on Popcorn Movies", url="https://popcornmovies.ac/"
+              )
+          ],
+          [
+              InlineKeyboardButton(
+                  "🌐 Watch on Vivarium", url="https://vivarium.su/"
+              )
+          ],
       ])
-
-    await message.reply(
-        f"🔍 I found multiple parts for **{query.title()}**.\nPlease select the"
-        " specific part you want to watch:",
-        reply_markup=InlineKeyboardMarkup(buttons),
-    )
-  else:
-    await message.reply(
-        f"❌ Sorry, no parts found for `{query.title()}` yet. Try searching"
-        " `spiderman` or `batman`!"
-    )
+      await message.reply(
+          f"🎬 **Movie:** `{query.title()}`\n\nChoose your platform below:",
+          reply_markup=keyboard,
+      )
+  except Exception as e:
+    print(f"Search Error: {e}")
 
 
 @app.on_callback_query(filters.regex("^part_"))
 async def select_movie_part(client, callback_query):
-  data_parts = callback_query.data.split("_")
-  key = data_parts[1]
-  idx = int(data_parts[2])
+  try:
+    data_parts = callback_query.data.split("_")
+    key = data_parts[1]
+    idx = int(data_parts[2])
 
-  movie = MOVIE_PARTS[key][idx]
+    movie = MOVIE_PARTS[key][idx]
 
-  keyboard = InlineKeyboardMarkup([
-      [
-          InlineKeyboardButton(
-              "🎬 Watch on Bingebox", url=movie["bingebox"]
-          )
-      ],
-      [
-          InlineKeyboardButton(
-              "🍿 Watch on Popcorn Movies", url=movie["popcorn"]
-          )
-      ],
-      [
-          InlineKeyboardButton(
-              "🌐 Watch on Vivarium", url=movie["vivarium"]
-          )
-      ],
-  ])
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🎬 Watch on Bingebox", url=movie["bingebox"]
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🍿 Watch on Popcorn Movies", url=movie["popcorn"]
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🌐 Watch on Vivarium", url=movie["vivarium"]
+            )
+        ],
+    ])
 
-  await callback_query.message.edit_text(
-      f"✨ **Selected:** {movie['title']}\n\nClick below to open the streaming"
-      " page:",
-      reply_markup=keyboard,
-  )
+    await callback_query.message.edit_text(
+        f"✨ **Selected:** {movie['title']}\n\nClick below to open:",
+        reply_markup=keyboard,
+    )
+  except Exception as e:
+    print(f"Callback Error: {e}")
 
 
 if __name__ == "__main__":
