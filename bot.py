@@ -18,59 +18,45 @@ def run_web():
   app_web.run(host="0.0.0.0", port=port)
 
 
-# Start Flask web server immediately in a background thread
 web_thread = threading.Thread(target=run_web)
 web_thread.daemon = True
 web_thread.start()
 
-print("Flask web server started successfully.")
-
 # 2. Initialize Pyrogram Client
-try:
-  app = Client(
-      "streaming_bot",
-      api_id=int(os.environ.get("API_ID", 0)),
-      api_hash=os.environ.get("API_HASH", ""),
-      bot_token=os.environ.get("BOT_TOKEN", ""),
-  )
-  print("Pyrogram client initialized.")
-except Exception as e:
-  print(f"Error initializing Pyrogram: {e}")
+app = Client(
+    "streaming_bot",
+    api_id=int(os.environ.get("API_ID", 0)),
+    api_hash=os.environ.get("API_HASH", ""),
+    bot_token=os.environ.get("BOT_TOKEN", ""),
+)
 
 
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
   await message.reply(
-      "Hey there! 👋 I'm your Instant Streaming Assistant.\nType any movie"
-      " name, and I will generate the streaming link for you instantly!"
+      "Hey there! 👋 I'm your Streaming Assistant.\nType any movie name to get"
+      " its streaming link!"
   )
 
 
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
-  try:
-    query = message.text.strip()
-    if not query:
-      return
+  query = message.text.strip()
+  if not query:
+    return
 
-    formatted_query = query.lower().replace(" ", "-")
-    streaming_url = f"https://bingebox.ac/search?q={formatted_query}"
+  # Direct link to Popcorn Movies homepage or search structure
+  streaming_url = "https://popcornmovies.ac/"
 
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                f"🌐 Watch '{query}' Online", url=streaming_url
-            )
-        ]
-    ])
+  keyboard = InlineKeyboardMarkup([
+      [InlineKeyboardButton(f"🍿 Watch '{query}' on Popcorn Movies", url=streaming_url)]
+  ])
 
-    await message.reply(
-        f"🎬 **Results for:** `{query}`\n\nClick the button below to find and"
-        " stream your movie:",
-        reply_markup=keyboard,
-    )
-  except Exception as e:
-    print(f"Error handling search message: {e}")
+  await message.reply(
+      f"🎬 **Movie Found:** `{query}`\n\nClick below to open and stream on"
+      " Popcorn Movies:",
+      reply_markup=keyboard,
+  )
 
 
 if __name__ == "__main__":
