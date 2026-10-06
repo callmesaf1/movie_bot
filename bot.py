@@ -30,34 +30,34 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-# Movie database updated with Netplayz
+# Movie database with direct movie-specific links for all 3 working platforms
 MOVIE_PARTS = {
     "spiderman": [
         {
             "title": "Spider-Man: Brand New Day (2026)",
-            "netplayz": "https://netplayz.icu/",
+            "netplayz": "https://netplayz.icu/movie/1311031",
             "popcorn": "https://popcornmovies.ac/movie/1311031",
-            "vivarium": "https://vivarium.su/",
+            "zoryva": "https://zoryva.me/movie/1311031",
         },
         {
             "title": "Spider-Man: No Way Home (2021)",
-            "netplayz": "https://netplayz.icu/",
+            "netplayz": "https://netplayz.icu/movie/634649",
             "popcorn": "https://popcornmovies.ac/movie/634649",
-            "vivarium": "https://vivarium.su/movie/634649",
+            "zoryva": "https://zoryva.me/movie/634649",
         },
     ],
     "batman": [
         {
             "title": "The Batman (2022)",
-            "netplayz": "https://netplayz.icu/",
+            "netplayz": "https://netplayz.icu/movie/414906",
             "popcorn": "https://popcornmovies.ac/movie/414906",
-            "vivarium": "https://vivarium.su/movie/414906",
+            "zoryva": "https://zoryva.me/movie/414906",
         },
         {
             "title": "The Dark Knight (2008)",
-            "netplayz": "https://netplayz.icu/",
+            "netplayz": "https://netplayz.icu/movie/155",
             "popcorn": "https://popcornmovies.ac/movie/155",
-            "vivarium": "https://vivarium.su/movie/155",
+            "zoryva": "https://zoryva.me/movie/155",
         },
     ],
 }
@@ -105,11 +105,7 @@ async def movie_search(client, message):
                   "🍿 Watch on Popcorn Movies", url="https://popcornmovies.ac/"
               )
           ],
-          [
-              InlineKeyboardButton(
-                  "🌐 Watch on Vivarium", url="https://vivarium.su/"
-              )
-          ],
+          [InlineKeyboardButton("🌐 Watch on Zoryva", url="https://zoryva.me/")],
       ])
       await message.reply(
           f"🎬 **Movie:** `{query.title()}`\n\nChoose your platform below:",
@@ -135,15 +131,12 @@ async def select_movie_part(client, callback_query):
                 "🍿 Watch on Popcorn Movies", url=movie["popcorn"]
             )
         ],
-        [
-            InlineKeyboardButton(
-                "🌐 Watch on Vivarium", url=movie["vivarium"]
-            )
-        ],
+        [InlineKeyboardButton("🌐 Watch on Zoryva", url=movie["zoryva"])],
     ])
 
     await callback_query.message.edit_text(
-        f"✨ **Selected:** {movie['title']}\n\nClick below to open:",
+        f"✨ **Selected:** {movie['title']}\n\nClick below to open direct movie"
+        " page:",
         reply_markup=keyboard,
     )
   except Exception as e:
