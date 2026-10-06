@@ -30,43 +30,134 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
+# Movie database with different parts and their specific URLs
+MOVIE_PARTS = {
+    "spiderman": [
+        {
+            "title": "Spider-Man: Brand New Day (2026)",
+            "bingebox": "https://bingebox.ac/movie/1311031",
+            "popcorn": "https://popcornmovies.ac/",
+            "vivarium": "https://vivarium.su/",
+        },
+        {
+            "title": "Spider-Man: No Way Home",
+            "bingebox": "https://bingebox.ac/",
+            "popcorn": "https://popcornmovies.ac/",
+            "vivarium": "https://vivarium.su/",
+        },
+        {
+            "title": "Spider-Man: Into the Spider-Verse",
+            "bingebox": "https://bingebox.ac/",
+            "popcorn": "https://popcornmovies.ac/",
+            "vivarium": "https://vivarium.su/",
+        },
+    ],
+    "batman": [
+        {
+            "title": "The Batman (2022)",
+            "bingebox": "https://bingebox.ac/",
+            "popcorn": "https://popcornmovies.ac/",
+            "vivarium": "https://vivarium.su/",
+        },
+        {
+            "title": "The Dark Knight (2008)",
+            "bingebox": "https://bingebox.ac/",
+            "popcorn": "https://popcornmovies.ac/",
+            "vivarium": "https://vivarium.su/",
+        },
+    ],
+}
+
 
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
   await message.reply(
-      "Hey there! 👋 I'm your Multi-Source Streaming Assistant.\nType any movie"
-      " name to get streaming links from all platforms!"
+      "Hey there! 👋 I'm your Smart Streaming Assistant.\nType a movie name"
+      " like `spiderman` or `batman` to choose a part!"
   )
 
 
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
-  query = message.text.strip()
-  if not query:
-    return
+  query = message.text.lower().strip()
 
-  # Multiple streaming platform buttons
+  # Check if we have parts for this movie
+  matched_key = None
+  for key in MOVIE_PARTS:
+    if key in query:
+      matched_key = key
+      break
+
+  if matched_key:
+    parts = MOVIE_PARTS[matched_key]
+    buttons = []
+    for idx, movie in enumerate(parts):
+      buttons.append([
+          InlineKeyboardButton(
+              f"🎬 {movie['title']}", callback_data=f"part_{matched_key}_{idx}"
+          )
+      ])
+
+    await message.reply(
+        f"🔍 I found multiple parts for **{query.title()}**.\nPlease select the"
+        " specific part you want to watch:",
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+  else:
+    # Default fallback for other movies
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🎬 Watch on Bingebox", url="https://bingebox.ac/"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🍿 Watch on Popcorn Movies", url="https://popcornmovies.ac/"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🌐 Watch on Vivarium", url="https://vivarium.su/"
+            )
+        ],
+    ])
+    await message.reply(
+        f"🎬 **Movie:** `{query.title()}`\n\nChoose your streaming platform"
+        " below:",
+        reply_markup=keyboard,
+    )
+
+
+@app.on_callback_query(filters.regex("^part_"))
+async def select_movie_part(client, callback_query):
+  data_parts = callback_query.data.split("_")
+  key = data_parts[1]
+  idx = int(data_parts[2])
+
+  movie = MOVIE_PARTS[key][idx]
+
   keyboard = InlineKeyboardMarkup([
       [
           InlineKeyboardButton(
-              "🎬 Watch on Bingebox", url="https://bingebox.ac/"
+              "🎬 Watch on Bingebox", url=movie["bingebox"]
           )
       ],
       [
           InlineKeyboardButton(
-              "🍿 Watch on Popcorn Movies", url="https://popcornmovies.ac/"
+              "🍿 Watch on Popcorn Movies", url=movie["popcorn"]
           )
       ],
       [
           InlineKeyboardButton(
-              "🌐 Watch on Vivarium", url="https://vivarium.su/"
+              "🌐 Watch on Vivarium", url=movie["vivarium"]
           )
       ],
   ])
 
-  await message.reply(
-      f"🎬 **Movie Found:** `{query}`\n\nChoose your preferred streaming"
-      " platform below:",
+  await callback_query.message.edit_text(
+      f"✨ **Selected:** {movie['title']}\n\nChoose your streaming platform"
+      " below:",
       reply_markup=keyboard,
   )
 
