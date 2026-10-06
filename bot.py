@@ -24,7 +24,7 @@ web_thread.start()
 
 # 2. Initialize Pyrogram Client
 app = Client(
-    "streaming_bot_v4",
+    "streaming_bot_v5",
     api_id=int(os.environ.get("API_ID", 0)),
     api_hash=os.environ.get("API_HASH", ""),
     bot_token=os.environ.get("BOT_TOKEN", ""),
@@ -35,8 +35,8 @@ app = Client(
 async def start_handler(client, message):
   await message.reply(
       "🎬 **Welcome to Universal Streaming Bot!**\n\nType *any* movie name you"
-      " want to watch, and I will instantly generate direct playback links"
-      " for all 4 platforms!"
+      " want to watch, and I will generate the working links for all 4"
+      " platforms!"
   )
 
 
@@ -47,16 +47,15 @@ async def movie_search(client, message):
     if not query:
       return
 
-    # Clean and format query for accurate URL query matching
     search_q = query.lower().replace(" ", "+")
 
-    # Direct content/search path configurations for the 4 working websites
+    # Corrected search query structures for all 4 platforms
     popcorn_url = f"https://popcornmovies.ac/search?q={search_q}"
     zoryva_url = f"https://zoryva.me/search?q={search_q}"
-    bingebang_url = f"https://bingebang.st/search?q={search_q}"
-    stigstream_url = f"https://stigstream.ru/search?q={search_q}"
+    # Adjusted route parameters for BingeBang and Stigstream to prevent 404s
+    bingebang_url = f"https://bingebang.st/?s={search_q}"
+    stigstream_url = f"https://stigstream.ru/?s={search_q}"
 
-    # Smooth multi-platform layout with clear action buttons
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🍿 Popcorn Movies (Direct Play)", url=popcorn_url)],
         [InlineKeyboardButton("🌐 Zoryva (Direct Play)", url=zoryva_url)],
@@ -66,7 +65,7 @@ async def movie_search(client, message):
 
     await message.reply(
         f"🎯 **Movie Requested:** `{query.title()}`\n\nChoose your preferred"
-        " platform below to jump straight to the playback page:",
+        " platform below:",
         reply_markup=keyboard,
     )
   except Exception as e:
