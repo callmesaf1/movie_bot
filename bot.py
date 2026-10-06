@@ -4,7 +4,7 @@ from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# 1. Initialize Flask web server for Render port detection
+# 1. Initialize Flask web server
 app_web = Flask(__name__)
 
 
@@ -35,8 +35,8 @@ app = Client(
 async def start_handler(client, message):
   await message.reply(
       "Hey there! 👋 I'm your Universal Streaming Assistant.\nType *any*"
-      " movie name in the world, and I will generate the direct watch links"
-      " for you instantly!"
+      " movie name in the world, and I will generate the streaming links for"
+      " you instantly!"
   )
 
 
@@ -47,11 +47,10 @@ async def movie_search(client, message):
     if not query:
       return
 
-    # Format user query for clean web searching across the platforms
     search_q = query.lower().replace(" ", "+")
 
-    # Dynamic direct search links for all 3 streaming platforms
-    netplayz_url = f"https://netplayz.icu/search?q={search_q}"
+    # Corrected Netplayz search route with hash routing fallback
+    netplayz_url = f"https://netplayz.icu/#/search?q={search_q}"
     popcorn_url = f"https://popcornmovies.ac/search?q={search_q}"
     zoryva_url = f"https://zoryva.me/search?q={search_q}"
 
