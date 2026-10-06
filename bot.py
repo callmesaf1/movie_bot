@@ -30,20 +30,20 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-# Movie database with direct movie-specific streaming links
+# Accurate movie entries with correct platform paths
 MOVIE_PARTS = {
     "spiderman": [
         {
             "title": "Spider-Man: Brand New Day (2026)",
-            "bingebox": "https://bingebox.ac/movie/1311031",
-            "popcorn": "https://popcornmovies.ac/movie/1311031",
-            "vivarium": "https://vivarium.su/movie/1311031",
+            "bingebox": "https://bingebox.ac/",
+            "popcorn": "https://popcornmovies.ac/",
+            "vivarium": "https://vivarium.su/",
         },
         {
-            "title": "Spider-Man: No Way Home",
+            "title": "Spider-Man: No Way Home (2021)",
             "bingebox": "https://bingebox.ac/movie/634649",
             "popcorn": "https://popcornmovies.ac/movie/634649",
-            "vivarium": "https://vivarium.su/movie/634649",
+            "vivarium": "https://vivarium.su/",
         },
     ],
     "batman": [
@@ -51,13 +51,13 @@ MOVIE_PARTS = {
             "title": "The Batman (2022)",
             "bingebox": "https://bingebox.ac/movie/414906",
             "popcorn": "https://popcornmovies.ac/movie/414906",
-            "vivarium": "https://vivarium.su/movie/414906",
+            "vivarium": "https://vivarium.su/",
         },
         {
             "title": "The Dark Knight (2008)",
             "bingebox": "https://bingebox.ac/movie/155",
             "popcorn": "https://popcornmovies.ac/movie/155",
-            "vivarium": "https://vivarium.su/movie/155",
+            "vivarium": "https://vivarium.su/",
         },
     ],
 }
@@ -98,8 +98,8 @@ async def movie_search(client, message):
     )
   else:
     await message.reply(
-        f"❌ Sorry, no direct parts found for `{query.title()}` yet. Try"
-        " searching `spiderman` or `batman`!"
+        f"❌ Sorry, no parts found for `{query.title()}` yet. Try searching"
+        " `spiderman` or `batman`!"
     )
 
 
@@ -130,8 +130,8 @@ async def select_movie_part(client, callback_query):
   ])
 
   await callback_query.message.edit_text(
-      f"✨ **Selected:** {movie['title']}\n\nClick below to open the direct"
-      " streaming page:",
+      f"✨ **Selected:** {movie['title']}\n\nClick below to open the streaming"
+      " page:",
       reply_markup=keyboard,
   )
 
