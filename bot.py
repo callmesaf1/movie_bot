@@ -30,40 +30,34 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-# Movie database with different parts and their specific URLs
+# Movie database with direct movie-specific streaming links
 MOVIE_PARTS = {
     "spiderman": [
         {
             "title": "Spider-Man: Brand New Day (2026)",
             "bingebox": "https://bingebox.ac/movie/1311031",
-            "popcorn": "https://popcornmovies.ac/",
-            "vivarium": "https://vivarium.su/",
+            "popcorn": "https://popcornmovies.ac/movie/1311031",
+            "vivarium": "https://vivarium.su/movie/1311031",
         },
         {
             "title": "Spider-Man: No Way Home",
-            "bingebox": "https://bingebox.ac/",
-            "popcorn": "https://popcornmovies.ac/",
-            "vivarium": "https://vivarium.su/",
-        },
-        {
-            "title": "Spider-Man: Into the Spider-Verse",
-            "bingebox": "https://bingebox.ac/",
-            "popcorn": "https://popcornmovies.ac/",
-            "vivarium": "https://vivarium.su/",
+            "bingebox": "https://bingebox.ac/movie/634649",
+            "popcorn": "https://popcornmovies.ac/movie/634649",
+            "vivarium": "https://vivarium.su/movie/634649",
         },
     ],
     "batman": [
         {
             "title": "The Batman (2022)",
-            "bingebox": "https://bingebox.ac/",
-            "popcorn": "https://popcornmovies.ac/",
-            "vivarium": "https://vivarium.su/",
+            "bingebox": "https://bingebox.ac/movie/414906",
+            "popcorn": "https://popcornmovies.ac/movie/414906",
+            "vivarium": "https://vivarium.su/movie/414906",
         },
         {
             "title": "The Dark Knight (2008)",
-            "bingebox": "https://bingebox.ac/",
-            "popcorn": "https://popcornmovies.ac/",
-            "vivarium": "https://vivarium.su/",
+            "bingebox": "https://bingebox.ac/movie/155",
+            "popcorn": "https://popcornmovies.ac/movie/155",
+            "vivarium": "https://vivarium.su/movie/155",
         },
     ],
 }
@@ -73,7 +67,7 @@ MOVIE_PARTS = {
 async def start_handler(client, message):
   await message.reply(
       "Hey there! 👋 I'm your Smart Streaming Assistant.\nType a movie name"
-      " like `spiderman` or `batman` to choose a part!"
+      " like `spiderman` or `batman` to select a part!"
   )
 
 
@@ -81,7 +75,6 @@ async def start_handler(client, message):
 async def movie_search(client, message):
   query = message.text.lower().strip()
 
-  # Check if we have parts for this movie
   matched_key = None
   for key in MOVIE_PARTS:
     if key in query:
@@ -104,28 +97,9 @@ async def movie_search(client, message):
         reply_markup=InlineKeyboardMarkup(buttons),
     )
   else:
-    # Default fallback for other movies
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "🎬 Watch on Bingebox", url="https://bingebox.ac/"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🍿 Watch on Popcorn Movies", url="https://popcornmovies.ac/"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🌐 Watch on Vivarium", url="https://vivarium.su/"
-            )
-        ],
-    ])
     await message.reply(
-        f"🎬 **Movie:** `{query.title()}`\n\nChoose your streaming platform"
-        " below:",
-        reply_markup=keyboard,
+        f"❌ Sorry, no direct parts found for `{query.title()}` yet. Try"
+        " searching `spiderman` or `batman`!"
     )
 
 
@@ -156,8 +130,8 @@ async def select_movie_part(client, callback_query):
   ])
 
   await callback_query.message.edit_text(
-      f"✨ **Selected:** {movie['title']}\n\nChoose your streaming platform"
-      " below:",
+      f"✨ **Selected:** {movie['title']}\n\nClick below to open the direct"
+      " streaming page:",
       reply_markup=keyboard,
   )
 
