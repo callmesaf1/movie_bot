@@ -6,7 +6,7 @@ from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# 1. Flask web server for Render keep-alive
+# 1. Initialize Flask web server for Render port detection
 app_web = Flask(__name__)
 
 
@@ -19,6 +19,11 @@ def run_web():
   port = int(os.environ.get("PORT", 10000))
   app_web.run(host="0.0.0.0", port=port)
 
+
+# Start Flask web server immediately in a background thread
+web_thread = threading.Thread(target=run_web)
+web_thread.daemon = True
+web_thread.start()
 
 # 2. Initialize Pyrogram Client
 app = Client(
@@ -135,6 +140,4 @@ async def send_streaming_link(client, callback_query):
 
 
 if __name__ == "__main__":
-  web_thread = threading.Thread(target=run_web)
-  web_thread.daemon = True
-  web_thread.start()
+  app.run()
