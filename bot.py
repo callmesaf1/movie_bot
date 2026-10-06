@@ -4,7 +4,7 @@ from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# 1. Initialize Flask web server
+# 1. Initialize Flask web server for Render keep-alive
 app_web = Flask(__name__)
 
 
@@ -30,133 +30,45 @@ app = Client(
     bot_token=os.environ.get("BOT_TOKEN", ""),
 )
 
-# Movie database parts
-MOVIE_PARTS = {
-    "spiderman": [
-        {
-            "title": "Spider-Man: Brand New Day (2026)",
-            "bingebox": "https://bingebox.ac/",
-            "popcorn": "https://popcornmovies.ac/",
-            "vivarium": "https://vivarium.su/",
-        },
-        {
-            "title": "Spider-Man: No Way Home (2021)",
-            "bingebox": "https://bingebox.ac/movie/634649",
-            "popcorn": "https://popcornmovies.ac/movie/634649",
-            "vivarium": "https://vivarium.su/",
-        },
-    ],
-    "batman": [
-        {
-            "title": "The Batman (2022)",
-            "bingebox": "https://bingebox.ac/movie/414906",
-            "popcorn": "https://popcornmovies.ac/movie/414906",
-            "vivarium": "https://vivarium.su/",
-        },
-        {
-            "title": "The Dark Knight (2008)",
-            "bingebox": "https://bingebox.ac/movie/155",
-            "popcorn": "https://popcornmovies.ac/movie/155",
-            "vivarium": "https://vivarium.su/",
-        },
-    ],
-}
-
 
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
   await message.reply(
-      "Hey there! 👋 I'm your Smart Streaming Assistant.\nType a movie name"
-      " like `spiderman` or `batman`!"
+      "Hey there! 👋 I'm your Universal Streaming Assistant.\nType *any*"
+      " movie name in the world, and I will generate the direct watch links"
+      " for you!"
   )
 
 
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
   try:
-    query = message.text.lower().strip()
+    query = message.text.strip()
+    if not query:
+      return
 
-    matched_key = None
-    for key in MOVIE_PARTS:
-      if key in query:
-        matched_key = key
-        break
+    # Clean up user query for web search formatting
+    formatted_query = query.lower().replace(" ", "-")
+    search_query_url = query.lower().replace(" ", "+")
 
-    if matched_key:
-      parts = MOVIE_PARTS[matched_key]
-      buttons = []
-      for idx, movie in enumerate(parts):
-        buttons.append([
-            InlineKeyboardButton(
-                f"🎬 {movie['title']}", callback_data=f"part_{matched_key}_{idx}"
-            )
-        ])
-
-      await message.reply(
-          f"🔍 I found multiple parts for **{query.title()}**.\nPlease select"
-          " the part you want:",
-          reply_markup=InlineKeyboardMarkup(buttons),
-      )
-    else:
-      # General fallback links for any other movie typed
-      keyboard = InlineKeyboardMarkup([
-          [
-              InlineKeyboardButton(
-                  "🎬 Watch on Bingebox", url="https://bingebox.ac/"
-              )
-          ],
-          [
-              InlineKeyboardButton(
-                  "🍿 Watch on Popcorn Movies", url="https://popcornmovies.ac/"
-              )
-          ],
-          [
-              InlineKeyboardButton(
-                  "🌐 Watch on Vivarium", url="https://vivarium.su/"
-              )
-          ],
-      ])
-      await message.reply(
-          f"🎬 **Movie:** `{query.title()}`\n\nChoose your platform below:",
-          reply_markup=keyboard,
-      )
-  except Exception as e:
-    print(f"Search Error: {e}")
-
-
-@app.on_callback_query(filters.regex("^part_"))
-async def select_movie_part(client, callback_query):
-  try:
-    data_parts = callback_query.data.split("_")
-    key = data_parts[1]
-    idx = int(data_parts[2])
-
-    movie = MOVIE_PARTS[key][idx]
+    # Direct dynamic links for any movie typed across your 3 favorite platforms
+    bingebox_url = f"https://bingebox.ac/search?q={search_query_url}"
+    popcorn_url = f"https://popcornmovies.ac/search?q={search_query_url}"
+    vivarium_url = f"https://vivarium.su/search?q={search_query_url}"
 
     keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "🎬 Watch on Bingebox", url=movie["bingebox"]
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🍿 Watch on Popcorn Movies", url=movie["popcorn"]
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🌐 Watch on Vivarium", url=movie["vivarium"]
-            )
-        ],
+        [InlineKeyboardButton(f"🎬 Watch on Bingebox", url=bingebox_url)],
+        [InlineKeyboardButton(f"🍿 Watch on Popcorn Movies", url=popcorn_url)],
+        [InlineKeyboardButton(f"🌐 Watch on Vivarium", url=vivarium_url)],
     ])
 
-    await callback_query.message.edit_text(
-        f"✨ **Selected:** {movie['title']}\n\nClick below to open:",
+    await message.reply(
+        f"🔍 **Search Results for:** `{query.title()}`\n\nClick your preferred"
+        " platform below to jump straight to the movie page:",
         reply_markup=keyboard,
     )
   except Exception as e:
-    print(f"Callback Error: {e}")
+    print(f"Search Error: {e}")
 
 
 if __name__ == "__main__":
