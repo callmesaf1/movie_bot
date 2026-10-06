@@ -1,5 +1,6 @@
 import asyncio
 import os
+import threading
 from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.errors import FloodWait
@@ -28,7 +29,7 @@ DB_CHANNEL = -1004402060167
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
   await message.reply(
-      "Hey there! 👋 I's **Better Call Saf**, your movie search assistant."
+      "Hey there! 👋 I'm **Better Call Saf**, your movie search assistant."
       " Type any movie name to get started!"
   )
 
