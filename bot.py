@@ -24,7 +24,7 @@ web_thread.start()
 
 # 2. Initialize Pyrogram Client
 app = Client(
-    "streaming_bot_v5",
+    "streaming_bot_v6",
     api_id=int(os.environ.get("API_ID", 0)),
     api_hash=os.environ.get("API_HASH", ""),
     bot_token=os.environ.get("BOT_TOKEN", ""),
@@ -34,8 +34,8 @@ app = Client(
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
   await message.reply(
-      "🎬 **Welcome to Universal Streaming Bot!**\n\nType *any* movie name you"
-      " want to watch, and I will generate the working links for all 4"
+      "🎬 **Welcome to Universal Streaming Bot!**\n\nType *any* movie name, and I"
+      " will generate direct playback links for the best recommended"
       " platforms!"
   )
 
@@ -49,22 +49,21 @@ async def movie_search(client, message):
 
     search_q = query.lower().replace(" ", "+")
 
-    # Corrected search query structures for all 4 platforms
+    # The 2 perfectly working recommended sites
     popcorn_url = f"https://popcornmovies.ac/search?q={search_q}"
     zoryva_url = f"https://zoryva.me/search?q={search_q}"
-    # Adjusted route parameters for BingeBang and Stigstream to prevent 404s
-    bingebang_url = f"https://bingebang.st/?s={search_q}"
-    stigstream_url = f"https://stigstream.ru/?s={search_q}"
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🍿 Popcorn Movies (Direct Play)", url=popcorn_url)],
-        [InlineKeyboardButton("🌐 Zoryva (Direct Play)", url=zoryva_url)],
-        [InlineKeyboardButton("⚡ BingeBang (Direct Play)", url=bingebang_url)],
-        [InlineKeyboardButton("🚀 Stigstream (Direct Play)", url=stigstream_url)],
+        [
+            InlineKeyboardButton(
+                "⭐🍿 Popcorn Movies (Recommended)", url=popcorn_url
+            )
+        ],
+        [InlineKeyboardButton("⭐🌐 Zoryva (Recommended)", url=zoryva_url)],
     ])
 
     await message.reply(
-        f"🎯 **Movie Requested:** `{query.title()}`\n\nChoose your preferred"
+        f"🎯 **Movie Requested:** `{query.title()}`\n\nChoose your recommended"
         " platform below:",
         reply_markup=keyboard,
     )
