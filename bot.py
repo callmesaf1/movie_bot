@@ -1,11 +1,10 @@
-import asyncio
 import os
 import threading
 from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# 1. Initialize Flask web server for Render port detection
+# 1. Initialize Flask web server
 app_web = Flask(__name__)
 
 
@@ -24,13 +23,19 @@ web_thread = threading.Thread(target=run_web)
 web_thread.daemon = True
 web_thread.start()
 
+print("Flask web server started successfully.")
+
 # 2. Initialize Pyrogram Client
-app = Client(
-    "streaming_bot",
-    api_id=int(os.environ.get("API_ID", 0)),
-    api_hash=os.environ.get("API_HASH", ""),
-    bot_token=os.environ.get("BOT_TOKEN", ""),
-)
+try:
+  app = Client(
+      "streaming_bot",
+      api_id=int(os.environ.get("API_ID", 0)),
+      api_hash=os.environ.get("API_HASH", ""),
+      bot_token=os.environ.get("BOT_TOKEN", ""),
+  )
+  print("Pyrogram client initialized.")
+except Exception as e:
+  print(f"Error initializing Pyrogram: {e}")
 
 
 @app.on_message(filters.command("start"))
@@ -43,28 +48,29 @@ async def start_handler(client, message):
 
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
-  query = message.text.strip()
-  if not query:
-    return
+  try:
+    query = message.text.strip()
+    if not query:
+      return
 
-  # Format the user query into a clean URL search format for bingebox.ac
-  # Replace spaces with hyphens or plus signs depending on how the site handles searches
-  formatted_query = query.lower().replace(" ", "-")
-  streaming_url = f"https://bingebox.ac/search?q={formatted_query}"
+    formatted_query = query.lower().replace(" ", "-")
+    streaming_url = f"https://bingebox.ac/search?q={formatted_query}"
 
-  keyboard = InlineKeyboardMarkup([
-      [
-          InlineKeyboardButton(
-              f"🌐 Watch '{query}' Online", url=streaming_url
-          )
-      ]
-  ])
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                f"🌐 Watch '{query}' Online", url=streaming_url
+            )
+        ]
+    ])
 
-  await message.reply(
-      f"🎬 **Results for:** `{query}`\n\nClick the button below to find and"
-      " stream your movie:",
-      reply_markup=keyboard,
-  )
+    await message.reply(
+        f"🎬 **Results for:** `{query}`\n\nClick the button below to find and"
+        " stream your movie:",
+        reply_markup=keyboard,
+    )
+  except Exception as e:
+    print(f"Error handling search message: {e}")
 
 
 if __name__ == "__main__":
