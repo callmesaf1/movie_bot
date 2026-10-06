@@ -24,7 +24,7 @@ web_thread.start()
 
 # 2. Initialize Pyrogram Client
 app = Client(
-    "streaming_bot_v6",
+    "streaming_bot_v7",
     api_id=int(os.environ.get("API_ID", 0)),
     api_hash=os.environ.get("API_HASH", ""),
     bot_token=os.environ.get("BOT_TOKEN", ""),
@@ -35,8 +35,8 @@ app = Client(
 async def start_handler(client, message):
   await message.reply(
       "🎬 **Welcome to Universal Streaming Bot!**\n\nType *any* movie name, and I"
-      " will generate direct playback links for the best recommended"
-      " platforms!"
+      " will generate direct search links for all 4 platforms with top"
+      " recommendations!"
   )
 
 
@@ -49,9 +49,11 @@ async def movie_search(client, message):
 
     search_q = query.lower().replace(" ", "+")
 
-    # The 2 perfectly working recommended sites
+    # All 4 websites configuration
     popcorn_url = f"https://popcornmovies.ac/search?q={search_q}"
     zoryva_url = f"https://zoryva.me/search?q={search_q}"
+    bingebang_url = f"https://bingebang.st/?s={search_q}"
+    stigstream_url = f"https://stigstream.ru/?s={search_q}"
 
     keyboard = InlineKeyboardMarkup([
         [
@@ -60,10 +62,12 @@ async def movie_search(client, message):
             )
         ],
         [InlineKeyboardButton("⭐🌐 Zoryva (Recommended)", url=zoryva_url)],
+        [InlineKeyboardButton("⚡ BingeBang", url=bingebang_url)],
+        [InlineKeyboardButton("🚀 Stigstream", url=stigstream_url)],
     ])
 
     await message.reply(
-        f"🎯 **Movie Requested:** `{query.title()}`\n\nChoose your recommended"
+        f"🎯 **Movie Requested:** `{query.title()}`\n\nChoose your preferred"
         " platform below:",
         reply_markup=keyboard,
     )
