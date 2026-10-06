@@ -78,7 +78,7 @@ async def track_channel_messages(client, message):
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def movie_search(client, message):
   query = message.text.lower().strip()
-  searching_msg = await message.reply("🔍 Searching your permanent database...")
+  searching_msg = await message.reply("🔍 Searching your database...")
 
   try:
     query_words = query.split()
@@ -110,10 +110,10 @@ async def movie_search(client, message):
           reply_markup=InlineKeyboardMarkup(buttons),
       )
     else:
+      # Clean message for regular users (no confusing instructions)
       await searching_msg.edit_text(
-          "Sorry, I couldn't find that movie in your database! 😢\n\n*Tip:* Just"
-          " forward the movie post once in your private channel to index it"
-          " permanently."
+          "Sorry, that movie is not available in our library yet! 😢 Please try"
+          " searching for another title."
       )
 
   except Exception as e:
@@ -131,12 +131,10 @@ async def send_selected_movie(client, callback_query):
   )
 
   try:
-    # Copy the main message directly using its Telegram message ID from the channel
     main_msg = await client.get_messages(DB_CHANNEL, main_msg_id)
     if main_msg:
       await main_msg.copy(chat_id=chat_id)
 
-      # Copy up to 25 subsequent messages (for multi-part movie files)
       sent_count = 0
       for next_id in range(main_msg_id + 1, main_msg_id + 30):
         if sent_count >= 25:
