@@ -34,9 +34,9 @@ app = Client(
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
   await message.reply(
-      "Hey there! 👋 I'm your Universal Streaming Assistant.\nType *any*"
-      " movie name in the world, and I will generate the streaming links for"
-      " you instantly!"
+      "Hey there! 👋 I'm your 4-Site Universal Streaming Assistant.\nType *any*"
+      " movie name, and I will generate direct search links for all 4"
+      " platforms instantly!"
   )
 
 
@@ -49,20 +49,22 @@ async def movie_search(client, message):
 
     search_q = query.lower().replace(" ", "+")
 
-    # Corrected Netplayz search route with hash routing fallback
-    netplayz_url = f"https://netplayz.icu/#/search?q={search_q}"
+    # Links for all 4 working websites
     popcorn_url = f"https://popcornmovies.ac/search?q={search_q}"
     zoryva_url = f"https://zoryva.me/search?q={search_q}"
+    bingebang_url = f"https://bingebang.st/search?q={search_q}"
+    stigstream_url = f"https://stigstream.ru/search?q={search_q}"
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎬 Watch on Netplayz", url=netplayz_url)],
         [InlineKeyboardButton("🍿 Watch on Popcorn Movies", url=popcorn_url)],
         [InlineKeyboardButton("🌐 Watch on Zoryva", url=zoryva_url)],
+        [InlineKeyboardButton("⚡ Watch on BingeBang", url=bingebang_url)],
+        [InlineKeyboardButton("🚀 Watch on Stigstream", url=stigstream_url)],
     ])
 
     await message.reply(
-        f"🔍 **Search Results for:** `{query.title()}`\n\nChoose your platform"
-        " below to open the movie page:",
+        f"🔍 **Search Results for:** `{query.title()}`\n\nChoose your preferred"
+        " platform below to open the movie:",
         reply_markup=keyboard,
     )
   except Exception as e:
