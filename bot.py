@@ -34,9 +34,9 @@ app = Client(
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
   await message.reply(
-      "Hey there! 👋 I'm your 4-Site Universal Streaming Assistant.\nType *any*"
-      " movie name, and I will generate direct search links for all 4"
-      " platforms instantly!"
+      "Hey there! 👋 I'm your 4-Site Streaming Assistant.\nType *any* movie"
+      " name, and I will generate direct search links for all 4 platforms"
+      " instantly!"
   )
 
 
@@ -49,7 +49,7 @@ async def movie_search(client, message):
 
     search_q = query.lower().replace(" ", "+")
 
-    # Links for all 4 working websites
+    # Links for the 4 active websites
     popcorn_url = f"https://popcornmovies.ac/search?q={search_q}"
     zoryva_url = f"https://zoryva.me/search?q={search_q}"
     bingebang_url = f"https://bingebang.st/search?q={search_q}"
@@ -64,7 +64,7 @@ async def movie_search(client, message):
 
     await message.reply(
         f"🔍 **Search Results for:** `{query.title()}`\n\nChoose your preferred"
-        " platform below to open the movie:",
+        " platform below:",
         reply_markup=keyboard,
     )
   except Exception as e:
